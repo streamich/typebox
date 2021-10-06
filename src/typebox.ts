@@ -58,6 +58,7 @@ export const NumberKind      = Symbol('NumberKind')
 export const IntegerKind     = Symbol('IntegerKind')
 export const BooleanKind     = Symbol('BooleanKind')
 export const NullKind        = Symbol('NullKind')
+export const FacadeKind      = Symbol('FacadeKind')
 export const UnknownKind     = Symbol('UnknownKind')
 export const AnyKind         = Symbol('AnyKind')
 
@@ -125,6 +126,7 @@ export type TRecord    <K extends TRecordKey, T extends TSchema> = { kind: typeo
 export type TArray     <T extends TSchema>                       = { kind: typeof ArrayKind, type: 'array', items: T } & ArrayOptions
 export type TLiteral   <T extends TValue>                        = { kind: typeof LiteralKind, const: T } & CustomOptions
 export type TEnum      <T extends TEnumKey[]>                    = { kind: typeof EnumKind, anyOf: T } & CustomOptions
+export type TFacade    <T>                                       = { kind: typeof FacadeKind, facade: T }
 export type TString                                              = { kind: typeof StringKind, type: 'string' } & StringOptions<string>
 export type TNumber                                              = { kind: typeof NumberKind, type: 'number' } & NumberOptions
 export type TInteger                                             = { kind: typeof IntegerKind, type: 'integer' } & NumberOptions
@@ -172,6 +174,7 @@ export type TSchema =
     | TConstructor<any[], any>
     | TFunction<any[], any>
     | TPromise<any>
+    | TFacade<any>
     | TUndefined
     | TVoid
 
@@ -235,6 +238,7 @@ export type Static<T> =
     T extends TArray<infer U>                ? StaticArray<U>          :
     T extends TEnum<infer U>                 ? StaticEnum<U>           :
     T extends TLiteral<infer U>              ? StaticLiteral<U>        :
+    T extends TFacade<infer U>               ? U                       :
     T extends TString                        ? string                  :
     T extends TNumber                        ? number                  :
     T extends TInteger                       ? number                  :
@@ -371,6 +375,11 @@ export class TypeBuilder {
         return { ...options, kind: NullKind, type: 'null' }
     }
 
+    /** 'STANDARD` Creates a facade type. */
+    public Facade<T>(options: CustomOptions = {}): TFacade<T> {
+        return { ...options, kind: FacadeKind } as any
+    }
+    
     /** `STANDARD` Creates an `unknown` schema. */
     public Unknown(options: CustomOptions = {}): TUnknown {
         return { ...options, kind: UnknownKind }
