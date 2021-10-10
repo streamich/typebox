@@ -56,10 +56,11 @@ License MIT
 - [Generic Types](#Generic-Types)
 - [Reference Types](#Reference-Types)
 - [Recursive Types](#Recursive-Types)
+- [Facade Types](#Facade-Types)
 - [Extended Types](#Extended-Types)
 - [Strict](#Strict)
 - [Validation](#Validation)
-- [OpenAPI](#OpenAPI)
+- [Open API](#Open-API)
 
 <a name="Example"></a>
 
@@ -533,6 +534,60 @@ function visit(node: Node) {
 }
 ```
 
+<a name="Facade-Types"></a>
+
+### Facade Types
+
+TypeBox allows for the creation of user defined types with specific inference rules. This functionally is provided by way of the `Type.Facade(...)` function. You can this function to construct user defined schemas that integrate with the rest of TypeBox. This can be useful in scenarios where you may need to extend TypeBox to support additional schema representations.
+
+```typescript
+const T = Type.Facade<{                            // const T = {
+   x: number,                                      //   type: 'object',
+   y: number                                       //   properties: {
+}>({                                               //     a: { type: 'number' },
+   type: 'object',                                 //     b: { type: 'number' },
+   properties: {                                   //   }
+     a: { type: 'number' },                        // }
+     b: { type: 'number' }                          
+   }                                               
+})                                                 
+
+type T = Static<typeof T>                          // type T = { a: number, b: number }
+
+const S = Type.Array(T)                            // const S = {                            
+                                                   //   type: 'array',
+                                                   //   items: {
+                                                   //     type: 'object',
+                                                   //     properties: {
+                                                   //       a: { type: 'number' },
+                                                   //       b: { type: 'number' }
+                                                   //     }
+                                                   //   }
+                                                   // }
+
+type S = Static<typeof S>                          // type S = { a: number, b: number }[]
+```
+
+This is sometimes desirable when working with specifications that extend JSON schema. An example of this is OpenAPI which uses a subset of JSON schema, but expresses certain data structures differently.
+
+```typescript
+// --------------------------------------------------------------------------------
+// Nullable<T>
+// --------------------------------------------------------------------------------
+
+export function Nullable<T extends TSchema>(schema: T): TFacade<Static<T> | null> {
+    return Type.Facade({ ...schema, nullable: true })
+}
+
+const T = Nullable(Type.String())     // const T = {
+                                      //    type: 'string',
+                                      //    nullable: true    
+                                      // }
+
+type T = Static<typeof T>             // type T = string | null
+
+```
+
 <a name="Extended-Types"></a>
 
 ### Extended Types
@@ -744,12 +799,15 @@ const ok = ajv.validate(User, {
 
 Please refer to the official AJV [documentation](https://ajv.js.org/guide/getting-started.html) for additional information.
 
-### OpenAPI
+<a name='Open API'>
 
-TypeBox can be used to create schemas for OpenAPI, however users should be aware of the various differences between the JSON Schema and OpenAPI specifications. Two common instances where OpenAPI diverges from the JSON Schema specification is OpenAPI's handling of `string enum` and `nullable`. The following shows how you can use TypeBox to construct these types.
+### Open API
+
+TypeBox can be used to create schemas for Open API, however users should be aware of the various differences between the JSON Schema and Open API specifications. Two common instances where OpenAPI diverges from the JSON Schema specification is Open API's handling of `string union` and `nullable`. For reference, the following shows how you can use TypeBox to construct these types.
 
 ```typescript
-import { Type, Static, TNull, TLiteral, TUnion, TSchema } from '@sinclair/typebox'
+
+import { Type, Static, TSchema, TFacade } from '@sinclair/typebox'
 
 //--------------------------------------------------------------------------------------------
 //
@@ -757,8 +815,8 @@ import { Type, Static, TNull, TLiteral, TUnion, TSchema } from '@sinclair/typebo
 //
 //--------------------------------------------------------------------------------------------
 
-function Nullable<T extends TSchema>(schema: T): TUnion<[T, TNull]> {
-    return { ...schema, nullable: true } as any
+export function Nullable<T extends TSchema>(schema: T): TFacade<Static<T> | null> {
+    return Type.Facade({ ...schema, nullable: true })
 }
 
 const T = Nullable(Type.String())        // const T = {
@@ -774,11 +832,12 @@ type T = Static<typeof T>                // type T = string | null
 //
 //--------------------------------------------------------------------------------------------
 
-type IntoStringUnion<T> = {[K in keyof T]: T[K] extends string ? TLiteral<T[K]>: never }
+export type TStringUnion<T extends string[]> = {[K in keyof T]: T[K] }[number]
 
-function StringUnion<T extends string[]>(values: [...T]): TUnion<IntoStringUnion<T>> {
-    return { enum: values } as any
+function StringUnion<T extends string[]>(values: [...T]): TFacade<TStringUnion<T>> {
+    throw Type.Facade({ enum: values })
 }
+
 
 const T = StringUnion(['A', 'B', 'C'])   // const T = {
                                          //    enum: ['A', 'B', 'C']
