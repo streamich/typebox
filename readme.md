@@ -568,26 +568,6 @@ const S = Type.Array(T)                            // const S = {
 type S = Static<typeof S>                          // type S = { a: number, b: number }[]
 ```
 
-This is sometimes desirable when working with specifications that extend JSON schema. An example of this is OpenAPI which uses a subset of JSON schema, but expresses certain data structures differently.
-
-```typescript
-// --------------------------------------------------------------------------------
-// Nullable<T>
-// --------------------------------------------------------------------------------
-
-export function Nullable<T extends TSchema>(schema: T): TFacade<Static<T> | null> {
-    return Type.Facade({ ...schema, nullable: true })
-}
-
-const T = Nullable(Type.String())     // const T = {
-                                      //    type: 'string',
-                                      //    nullable: true    
-                                      // }
-
-type T = Static<typeof T>             // type T = string | null
-
-```
-
 <a name="Extended-Types"></a>
 
 ### Extended Types
